@@ -2171,7 +2171,10 @@ function isZielDisabledByBioAge(domain, stufeNummer) {
     const birthDate = document.getElementById('birthDate')?.value;
     if (!birthDate) return false;
 
-    const bioAgeDecimal = parseFloat(calculateAge(birthDate));
+    const ageResult = calculateAge(birthDate);
+    if (!ageResult) return false;
+
+    const bioAgeDecimal = ageResult.decimal;
     if (isNaN(bioAgeDecimal) || bioAgeDecimal <= 0) return false;
 
     // Stufen-Altersreferenzen (Minimum-Alter jeder Stufe)
