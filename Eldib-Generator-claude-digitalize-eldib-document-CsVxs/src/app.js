@@ -5,6 +5,7 @@
 
 import { ELDIB_DATA } from './data/eldibData.js';
 import { INTERVENTIONS, createGoalStatement } from './data/interventions.js';
+import { BEISPIELE } from './data/beispiele.js';
 
 // ========================================
 // State Management
@@ -123,7 +124,7 @@ function renderItemRow(domain, item, color) {
 
   return `
     <div class="item-row" data-item-id="${item.id}" style="--domain-color: ${color}">
-      <div class="item-info">
+      <div class="item-info" ondblclick="openBeispieleModal('${item.id}')" title="Doppelklick für Beispiele">
         <span class="item-code">${item.id}</span>
         <span class="item-name">${item.name}</span>
         <span class="item-description">${item.beschreibung}</span>
@@ -230,6 +231,42 @@ window.openGoalModal = function(domain, itemId) {
 
 window.closeGoalModal = function() {
   document.getElementById('goalModal').classList.remove('active');
+};
+
+// ========================================
+// Beispiele Modal (Doppelklick)
+// ========================================
+window.openBeispieleModal = function(itemId) {
+  const beispielData = BEISPIELE[itemId];
+
+  if (!beispielData) {
+    alert('Keine Beispiele für dieses Item verfügbar.');
+    return;
+  }
+
+  const modalBody = document.getElementById('goalModalBody');
+  modalBody.innerHTML = `
+    <div class="beispiele-content">
+      <div class="form-group">
+        <label style="font-size: 1.1rem; color: var(--color-primary);">
+          <strong>${itemId}: ${beispielData.titel}</strong>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>Beispiele zur Beobachtung:</label>
+        <ul class="beispiele-list" style="list-style: disc; padding-left: var(--spacing-lg); margin-top: var(--spacing-sm);">
+          ${beispielData.beispiele.map(b => `<li style="margin-bottom: var(--spacing-sm); line-height: 1.5;">${b}</li>`).join('')}
+        </ul>
+      </div>
+
+      <div style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background: var(--color-bg); border-radius: var(--radius-md); font-size: 0.875rem; color: var(--color-text-muted);">
+        <em>Diese Beispiele dienen als Orientierung für die Beobachtung und Einschätzung des Items.</em>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('goalModal').classList.add('active');
 };
 
 window.saveGoal = function() {

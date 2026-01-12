@@ -488,6 +488,15 @@
 
         .item-info {
             min-width: 0;
+            cursor: pointer;
+            transition: background 0.2s;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin: -4px -8px;
+        }
+
+        .item-info:hover {
+            background: rgba(52, 152, 219, 0.1);
         }
 
         .item-code {
@@ -576,8 +585,7 @@
         }
 
         /* Neue Checkbox-Typen */
-        .checkbox-nicht-erreicht,
-        .checkbox-ressource {
+        .checkbox-nicht-erreicht {
             width: 28px;
             height: 28px;
             border-radius: 50%;
@@ -594,18 +602,9 @@
             border-color: #95a5a6;
         }
 
-        .checkbox-ressource:hover {
-            border-color: #3498db;
-        }
-
         .checkbox-nicht-erreicht.checked {
             background: #95a5a6;
             border-color: #95a5a6;
-        }
-
-        .checkbox-ressource.checked {
-            background: #3498db;
-            border-color: #3498db;
         }
 
         .checkbox-nicht-erreicht.checked::after {
@@ -613,12 +612,6 @@
             color: white;
             font-size: 14px;
             font-weight: bold;
-        }
-
-        .checkbox-ressource.checked::after {
-            content: "★";
-            color: white;
-            font-size: 12px;
         }
 
         /* Disabled states */
@@ -988,12 +981,8 @@
                 <div class="legend-dot" style="background: #f39c12;"></div>
                 <span><strong>Ziel</strong> - Aktuelles Förderziel</span>
             </div>
-            <div class="legend-item">
-                <div class="legend-dot" style="background: #3498db;"></div>
-                <span><strong>Ressource</strong> - Stärke/Ressource</span>
-            </div>
             <div class="legend-item" style="margin-left: auto; font-size: 12px; color: #888;">
-                <span>Doppelklick auf Item = Details anzeigen</span>
+                <span>Doppelklick auf Item = Beispiele anzeigen</span>
             </div>
         </div>
 
@@ -1028,10 +1017,6 @@
             <div class="stat-item">
                 <div class="stat-value ziel" id="totalZiele">0</div>
                 <div class="stat-label">Ziele</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" style="color: #3498db;" id="totalRessourcen">0</div>
-                <div class="stat-label">Ressourcen</div>
             </div>
         </div>
         <button class="export-btn" onclick="exportToWord()">
