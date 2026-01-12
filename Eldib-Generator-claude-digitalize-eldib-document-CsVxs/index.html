@@ -2164,9 +2164,18 @@ function renderItem(domain, item, stufeNummer) {
     `;
 }
 
+// Ermittelt die Entwicklungsstufe basierend auf dem Alter
+function getBioAgeStufe(bioAge) {
+    if (bioAge <= 2) return 1;   // 0-2 Jahre
+    if (bioAge <= 5) return 2;   // 2-5 Jahre
+    if (bioAge <= 9) return 3;   // 6-9 Jahre
+    if (bioAge <= 12) return 4;  // 10-12 Jahre
+    return 5;                     // 13-16 Jahre
+}
+
 // Prüft ob Ziele für diese Stufe blockiert sind
-// Regel: Nur wenn das biologische Alter die Stufe ÜBERSCHRITTEN hat, werden Ziele blockiert
-// D.h. auf der aktuellen Stufe und höheren Stufen sind Ziele weiterhin erlaubt
+// Regel: Nur Stufen VOR dem biologischen Alter erlauben Ziele (Förderziele)
+// Die aktuelle Stufe und alle danach sind blockiert
 function isZielDisabledByBioAge(domain, stufeNummer) {
     const birthDate = document.getElementById('birthDate')?.value;
     if (!birthDate) return false;
@@ -2177,21 +2186,17 @@ function isZielDisabledByBioAge(domain, stufeNummer) {
     const bioAgeDecimal = ageResult.decimal;
     if (isNaN(bioAgeDecimal) || bioAgeDecimal <= 0) return false;
 
-    // Stufen-Altersreferenzen (MAXIMUM-Alter jeder Stufe)
-    const stufenMaxAlter = {
-        1: 2,   // 0-2 Jahre
-        2: 5,   // 2-5 Jahre
-        3: 9,   // 6-9 Jahre
-        4: 12,  // 10-12 Jahre
-        5: 16   // 13-16 Jahre
-    };
+    // Ermittle die Stufe in der sich das Kind befindet
+    const bioAgeStufe = getBioAgeStufe(bioAgeDecimal);
 
-    const stufeMaxAge = stufenMaxAlter[stufeNummer] || 16;
-
-    // Nur blockieren wenn Bio-Alter > Stufen-Maximum
-    // Beispiel: Kind ist 7 Jahre → Stufe 1 (max 2) und Stufe 2 (max 5) blockiert
-    //           Stufe 3 (max 9), 4 und 5 erlauben weiterhin Ziele
-    return bioAgeDecimal > stufeMaxAge;
+    // Blockiere wenn Stufe >= Bio-Alter-Stufe
+    // Beispiel: Kind ist 7 Jahre → Bio-Stufe = 3
+    //   Stufe 1: 1 >= 3? Nein → ERLAUBT (Förderziel möglich)
+    //   Stufe 2: 2 >= 3? Nein → ERLAUBT (Förderziel möglich)
+    //   Stufe 3: 3 >= 3? Ja → BLOCKIERT (aktuelle Stufe)
+    //   Stufe 4: 4 >= 3? Ja → BLOCKIERT
+    //   Stufe 5: 5 >= 3? Ja → BLOCKIERT
+    return stufeNummer >= bioAgeStufe;
 }
 
 // Modal für Item-Details anzeigen
