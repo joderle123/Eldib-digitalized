@@ -2133,6 +2133,9 @@ function renderItem(domain, item, stufeNummer) {
     const zielDisabled = status.nichtErreicht || isZielDisabledByBioAge(domain, stufeNummer);
     const zielDisabledClass = zielDisabled ? 'checkbox-disabled' : '';
     const zielGroupDisabled = zielDisabled ? 'disabled' : '';
+    const zielTitle = zielDisabled
+        ? (status.nichtErreicht ? 'Ziel nicht möglich bei "nicht erreicht"' : 'Ziel nicht möglich (Altersgemäß)')
+        : 'Als Ziel definieren';
 
     return `
         <div class="item-row" data-domain="${domain}" data-item-id="${item.id}">
@@ -2152,10 +2155,10 @@ function renderItem(domain, item, stufeNummer) {
                     <div class="checkbox-nicht-erreicht ${status.nichtErreicht ? 'checked' : ''}"
                          onclick="toggleStatus('${domain}', '${item.id}', 'nichtErreicht')"></div>
                 </div>
-                <div class="checkbox-group ${zielGroupDisabled}">
+                <div class="checkbox-group ${zielGroupDisabled}" title="${zielTitle}">
                     <label>Ziel</label>
                     <div class="checkbox-ziel ${status.ziel ? 'checked' : ''} ${zielDisabledClass}"
-                         onclick="${zielDisabled ? '' : "toggleStatus('" + domain + "', '" + item.id + "', 'ziel')"}"></div>
+                         onclick="if(!assessments['${domain}']['${item.id}'].nichtErreicht && !isZielDisabledByBioAge('${domain}', ${stufeNummer})) toggleStatus('${domain}', '${item.id}', 'ziel')"></div>
                 </div>
             </div>
         </div>
