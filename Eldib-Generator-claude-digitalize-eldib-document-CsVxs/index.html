@@ -439,6 +439,18 @@
             color: #666;
         }
 
+        .age-hint {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 4px 10px;
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
         .stufe-complete-btn {
             background: #27ae60;
             color: white;
@@ -1293,7 +1305,7 @@ function resetAssessments() {
     Object.keys(ELDIB_DATA).forEach(domain => {
         ELDIB_DATA[domain].stufen.forEach(stufe => {
             stufe.items.forEach(item => {
-                assessments[domain][item.id] = { erreicht: false, nichtErreicht: false, ziel: false, ressource: false };
+                assessments[domain][item.id] = { erreicht: false, nichtErreicht: false, ziel: false };
             });
         });
     });
@@ -1819,7 +1831,7 @@ Object.keys(ELDIB_DATA).forEach(domain => {
     assessments[domain] = {};
     ELDIB_DATA[domain].stufen.forEach(stufe => {
         stufe.items.forEach(item => {
-            assessments[domain][item.id] = { erreicht: false, ziel: false };
+            assessments[domain][item.id] = { erreicht: false, nichtErreicht: false, ziel: false };
         });
     });
 });
@@ -1833,12 +1845,16 @@ function renderDomain(domain) {
 
     data.stufen.forEach(stufe => {
         const allReached = isStufeComplete(domain, stufe.nummer);
+        const zielDisabledByAge = isZielDisabledByBioAge(domain, stufe.nummer);
+        const ageHint = zielDisabledByAge ? '<span class="age-hint" title="Ziele auf dieser Stufe sind deaktiviert, da das biologische Alter dem Entwicklungsalter entspricht oder darüber liegt">⚠️ Altersgemäß - keine Ziele möglich</span>' : '';
+
         html += `
             <div class="stufe-container" data-domain="${domain}">
                 <div class="stufe-header">
                     <div class="stufe-header-text">
                         <h3>Stufe ${stufe.nummer}: ${stufe.stufenziel}</h3>
                         <p>${stufe.bereichsziel}</p>
+                        ${ageHint}
                     </div>
                     <button class="stufe-complete-btn ${allReached ? 'completed' : ''}"
                             onclick="toggleStufeComplete('${domain}', ${stufe.nummer})">
@@ -1913,17 +1929,14 @@ function renderItem(domain, item, stufeNummer) {
                     <div class="checkbox-ziel ${status.ziel ? 'checked' : ''} ${zielDisabledClass}"
                          onclick="${zielDisabled ? '' : "toggleStatus('" + domain + "', '" + item.id + "', 'ziel')"}"></div>
                 </div>
-                <div class="checkbox-group">
-                    <label>Ressource</label>
-                    <div class="checkbox-ressource ${status.ressource ? 'checked' : ''}"
-                         onclick="toggleStatus('${domain}', '${item.id}', 'ressource')"></div>
-                </div>
             </div>
         </div>
     `;
 }
 
-// Prüft ob Ziele für diese Stufe blockiert sind (weil Bio-Alter >= Stufen-Alter)
+// Prüft ob Ziele für diese Stufe blockiert sind
+// Regel: Wenn das biologische Alter dem sozio-emotionalen Entwicklungsalter der Stufe entspricht
+// oder darüber liegt, sind keine Ziele auf dieser Stufe erlaubt (nur erreicht/nicht erreicht)
 function isZielDisabledByBioAge(domain, stufeNummer) {
     const birthDate = document.getElementById('birthDate')?.value;
     if (!birthDate) return false;
@@ -1931,19 +1944,20 @@ function isZielDisabledByBioAge(domain, stufeNummer) {
     const bioAgeDecimal = parseFloat(calculateAge(birthDate));
     if (isNaN(bioAgeDecimal) || bioAgeDecimal <= 0) return false;
 
-    // Stufen-Altersreferenzen
-    const stufenAlter = {
-        1: 2,   // 0-2 Jahre
-        2: 5,   // 2-5 Jahre
-        3: 9,   // 6-9 Jahre
-        4: 12,  // 10-12 Jahre
-        5: 16   // 13-16 Jahre
+    // Stufen-Altersreferenzen (Minimum-Alter jeder Stufe)
+    const stufenMinAlter = {
+        1: 0,   // 0-2 Jahre
+        2: 2,   // 2-5 Jahre
+        3: 6,   // 6-9 Jahre
+        4: 10,  // 10-12 Jahre
+        5: 13   // 13-16 Jahre
     };
 
-    const stufeMaxAge = stufenAlter[stufeNummer] || 16;
+    const stufeMinAge = stufenMinAlter[stufeNummer] || 0;
 
-    // Wenn Bio-Alter >= Stufen-Maximum, dann keine Ziele mehr erlaubt (nur Ressourcen)
-    return bioAgeDecimal >= stufeMaxAge;
+    // Wenn Bio-Alter >= Stufen-Minimum, dann keine Ziele erlaubt
+    // (Kind sollte diese Stufe bereits erreicht haben oder sich darauf befinden)
+    return bioAgeDecimal >= stufeMinAge;
 }
 
 // Modal für Item-Details anzeigen
@@ -2051,11 +2065,6 @@ function toggleStatus(domain, itemId, type) {
                 item.nichtErreicht = false;
             }
             break;
-
-        case 'ressource':
-            // Ressource kann unabhängig von anderen gesetzt werden
-            item.ressource = !item.ressource;
-            break;
     }
 
     renderAllDomains();
@@ -2066,21 +2075,16 @@ function toggleStatus(domain, itemId, type) {
 function updateStats() {
     let totalErreicht = 0;
     let totalZiele = 0;
-    let totalRessourcen = 0;
 
     Object.keys(assessments).forEach(domain => {
         Object.values(assessments[domain]).forEach(status => {
             if (status.erreicht) totalErreicht++;
             if (status.ziel) totalZiele++;
-            if (status.ressource) totalRessourcen++;
         });
     });
 
     document.getElementById('totalErreicht').textContent = totalErreicht;
     document.getElementById('totalZiele').textContent = totalZiele;
-
-    const ressourcenEl = document.getElementById('totalRessourcen');
-    if (ressourcenEl) ressourcenEl.textContent = totalRessourcen;
 }
 
 // ==========================================
