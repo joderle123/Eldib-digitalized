@@ -2277,6 +2277,17 @@ function switchDomain(domain) {
     }
 }
 
+// Hilfsfunktion: Findet die Stufennummer für ein Item
+function getStufeForItem(domain, itemId) {
+    const data = ELDIB_DATA[domain];
+    for (const stufe of data.stufen) {
+        if (stufe.items.some(i => i.id === itemId)) {
+            return stufe.nummer;
+        }
+    }
+    return null;
+}
+
 function toggleStatus(domain, itemId, type) {
     const item = assessments[domain][itemId];
 
@@ -2300,11 +2311,21 @@ function toggleStatus(domain, itemId, type) {
             break;
 
         case 'ziel':
+            // BLOCKIERUNG 1: Wenn "nicht erreicht" aktiv ist, kann kein Ziel gesetzt werden
+            if (item.nichtErreicht) {
+                console.log('Ziel blockiert: Item ist als "nicht erreicht" markiert');
+                return; // Abbrechen ohne Änderung
+            }
+            // BLOCKIERUNG 2: Wenn Bio-Alter >= Stufen-Alter, kein Ziel möglich
+            const stufeNummer = getStufeForItem(domain, itemId);
+            if (stufeNummer && isZielDisabledByBioAge(domain, stufeNummer)) {
+                console.log('Ziel blockiert: Bio-Alter entspricht oder übersteigt Stufen-Alter');
+                return; // Abbrechen ohne Änderung
+            }
             item.ziel = !item.ziel;
             if (item.ziel) {
-                // Ziel schließt erreicht und nichtErreicht aus
+                // Ziel schließt erreicht aus
                 item.erreicht = false;
-                item.nichtErreicht = false;
             }
             break;
     }
