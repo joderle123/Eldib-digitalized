@@ -2129,13 +2129,12 @@ function toggleStufeComplete(domain, stufeNummer) {
 function renderItem(domain, item, stufeNummer) {
     const status = assessments[domain][item.id];
 
-    // Prüfe ob Ziele blockiert werden sollen
-    const zielDisabled = status.nichtErreicht || isZielDisabledByBioAge(domain, stufeNummer);
+    // Prüfe ob Ziele blockiert werden sollen (verwendet neue isZielBlocked Funktion)
+    const blockCheck = isZielBlocked(domain, item.id);
+    const zielDisabled = blockCheck.blocked;
     const zielDisabledClass = zielDisabled ? 'checkbox-disabled' : '';
     const zielGroupDisabled = zielDisabled ? 'disabled' : '';
-    const zielTitle = zielDisabled
-        ? (status.nichtErreicht ? 'Ziel nicht möglich bei "nicht erreicht"' : 'Ziel nicht möglich (Altersgemäß)')
-        : 'Als Ziel definieren';
+    const zielTitle = zielDisabled ? blockCheck.reason : 'Als Ziel definieren';
 
     return `
         <div class="item-row" data-domain="${domain}" data-item-id="${item.id}">
@@ -2158,7 +2157,7 @@ function renderItem(domain, item, stufeNummer) {
                 <div class="checkbox-group ${zielGroupDisabled}" title="${zielTitle}">
                     <label>Ziel</label>
                     <div class="checkbox-ziel ${status.ziel ? 'checked' : ''} ${zielDisabledClass}"
-                         onclick="if(!assessments['${domain}']['${item.id}'].nichtErreicht && !isZielDisabledByBioAge('${domain}', ${stufeNummer})) toggleStatus('${domain}', '${item.id}', 'ziel')"></div>
+                         onclick="toggleStatus('${domain}', '${item.id}', 'ziel')"></div>
                 </div>
             </div>
         </div>
@@ -2288,6 +2287,44 @@ function getStufeForItem(domain, itemId) {
     return null;
 }
 
+// Hilfsfunktion: Prüft ob ein früheres Item als "nicht erreicht" markiert ist
+// Wenn ja, können spätere Items keine Ziele sein (Entwicklungslogik)
+function hasEarlierNichtErreicht(domain, itemId) {
+    const data = ELDIB_DATA[domain];
+    let foundCurrentItem = false;
+
+    // Gehe durch alle Stufen und Items in Reihenfolge
+    for (const stufe of data.stufen) {
+        for (const item of stufe.items) {
+            if (item.id === itemId) {
+                // Wir haben das aktuelle Item erreicht - alle früheren wurden geprüft
+                return false;
+            }
+            // Prüfe ob dieses frühere Item als "nicht erreicht" markiert ist
+            if (assessments[domain][item.id]?.nichtErreicht) {
+                return true; // Ein früheres Item ist "nicht erreicht" → blockieren
+            }
+        }
+    }
+    return false;
+}
+
+// Prüft ob Ziel für dieses Item blockiert ist
+function isZielBlocked(domain, itemId) {
+    // Regel 1: Ein früheres Item ist "nicht erreicht"
+    if (hasEarlierNichtErreicht(domain, itemId)) {
+        return { blocked: true, reason: 'Ein früheres Item ist als "nicht erreicht" markiert' };
+    }
+
+    // Regel 2: Bio-Alter entspricht oder übersteigt Stufen-Alter
+    const stufeNummer = getStufeForItem(domain, itemId);
+    if (stufeNummer && isZielDisabledByBioAge(domain, stufeNummer)) {
+        return { blocked: true, reason: 'Bio-Alter entspricht der Entwicklungsstufe' };
+    }
+
+    return { blocked: false, reason: '' };
+}
+
 function toggleStatus(domain, itemId, type) {
     const item = assessments[domain][itemId];
 
@@ -2311,15 +2348,10 @@ function toggleStatus(domain, itemId, type) {
             break;
 
         case 'ziel':
-            // BLOCKIERUNG 1: Wenn "nicht erreicht" aktiv ist, kann kein Ziel gesetzt werden
-            if (item.nichtErreicht) {
-                console.log('Ziel blockiert: Item ist als "nicht erreicht" markiert');
-                return; // Abbrechen ohne Änderung
-            }
-            // BLOCKIERUNG 2: Wenn Bio-Alter >= Stufen-Alter, kein Ziel möglich
-            const stufeNummer = getStufeForItem(domain, itemId);
-            if (stufeNummer && isZielDisabledByBioAge(domain, stufeNummer)) {
-                console.log('Ziel blockiert: Bio-Alter entspricht oder übersteigt Stufen-Alter');
+            // Prüfe alle Blockierungsregeln
+            const blockCheck = isZielBlocked(domain, itemId);
+            if (blockCheck.blocked) {
+                console.log('Ziel blockiert:', blockCheck.reason);
                 return; // Abbrechen ohne Änderung
             }
             item.ziel = !item.ziel;
