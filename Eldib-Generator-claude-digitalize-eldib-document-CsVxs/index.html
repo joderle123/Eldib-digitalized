@@ -2165,8 +2165,8 @@ function renderItem(domain, item, stufeNummer) {
 }
 
 // Prüft ob Ziele für diese Stufe blockiert sind
-// Regel: Wenn das biologische Alter dem sozio-emotionalen Entwicklungsalter der Stufe entspricht
-// oder darüber liegt, sind keine Ziele auf dieser Stufe erlaubt (nur erreicht/nicht erreicht)
+// Regel: Nur wenn das biologische Alter die Stufe ÜBERSCHRITTEN hat, werden Ziele blockiert
+// D.h. auf der aktuellen Stufe und höheren Stufen sind Ziele weiterhin erlaubt
 function isZielDisabledByBioAge(domain, stufeNummer) {
     const birthDate = document.getElementById('birthDate')?.value;
     if (!birthDate) return false;
@@ -2177,20 +2177,21 @@ function isZielDisabledByBioAge(domain, stufeNummer) {
     const bioAgeDecimal = ageResult.decimal;
     if (isNaN(bioAgeDecimal) || bioAgeDecimal <= 0) return false;
 
-    // Stufen-Altersreferenzen (Minimum-Alter jeder Stufe)
-    const stufenMinAlter = {
-        1: 0,   // 0-2 Jahre
-        2: 2,   // 2-5 Jahre
-        3: 6,   // 6-9 Jahre
-        4: 10,  // 10-12 Jahre
-        5: 13   // 13-16 Jahre
+    // Stufen-Altersreferenzen (MAXIMUM-Alter jeder Stufe)
+    const stufenMaxAlter = {
+        1: 2,   // 0-2 Jahre
+        2: 5,   // 2-5 Jahre
+        3: 9,   // 6-9 Jahre
+        4: 12,  // 10-12 Jahre
+        5: 16   // 13-16 Jahre
     };
 
-    const stufeMinAge = stufenMinAlter[stufeNummer] || 0;
+    const stufeMaxAge = stufenMaxAlter[stufeNummer] || 16;
 
-    // Wenn Bio-Alter >= Stufen-Minimum, dann keine Ziele erlaubt
-    // (Kind sollte diese Stufe bereits erreicht haben oder sich darauf befinden)
-    return bioAgeDecimal >= stufeMinAge;
+    // Nur blockieren wenn Bio-Alter > Stufen-Maximum
+    // Beispiel: Kind ist 7 Jahre → Stufe 1 (max 2) und Stufe 2 (max 5) blockiert
+    //           Stufe 3 (max 9), 4 und 5 erlauben weiterhin Ziele
+    return bioAgeDecimal > stufeMaxAge;
 }
 
 // Modal für Item-Details anzeigen
