@@ -811,6 +811,52 @@
         .legend-dot.erreicht { background: #27ae60; }
         .legend-dot.ziel { background: #f39c12; }
 
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #3498db;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
         /* Zusammenfassung */
         .summary-bar {
             position: fixed;
@@ -1036,8 +1082,12 @@
                 <div class="legend-dot" style="background: #f39c12;"></div>
                 <span><strong>Ziel</strong> - Aktuelles Förderziel</span>
             </div>
-            <div class="legend-item" style="margin-left: auto; font-size: 12px; color: #888;">
-                <span>Doppelklick auf Item = Beispiele anzeigen</span>
+            <div class="legend-item" style="margin-left: auto;">
+                <label class="toggle-switch" title="Blockade-Regeln ein/ausschalten">
+                    <input type="checkbox" id="blockingRulesToggle" checked onchange="toggleBlockingRules()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size: 12px; margin-left: 8px;">Blockade-Regeln</span>
             </div>
         </div>
 
@@ -1090,6 +1140,26 @@
 let allProfiles = {};  // Alle Schülerprofile
 let currentProfileId = null;
 let currentEvaluationId = null;
+let blockingRulesEnabled = true;  // Blockade-Regeln standardmäßig aktiviert
+
+// Toggle für Blockade-Regeln
+function toggleBlockingRules() {
+    const toggle = document.getElementById('blockingRulesToggle');
+    blockingRulesEnabled = toggle.checked;
+    renderAllDomains();
+    // Speichere Einstellung
+    localStorage.setItem('eldib_blocking_rules', blockingRulesEnabled);
+}
+
+// Lade Blockade-Regeln Einstellung
+function loadBlockingRulesSetting() {
+    const saved = localStorage.getItem('eldib_blocking_rules');
+    if (saved !== null) {
+        blockingRulesEnabled = saved === 'true';
+        const toggle = document.getElementById('blockingRulesToggle');
+        if (toggle) toggle.checked = blockingRulesEnabled;
+    }
+}
 
 function generateId() {
     return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1126,11 +1196,15 @@ function loadProfile(profileId) {
         document.getElementById('deleteProfileBtn').style.display = 'none';
         document.getElementById('evaluationSelect').innerHTML = '<option value="">-- Evaluation wählen --</option>';
         updateEvaluationUI();
+        localStorage.removeItem('eldib_last_profile');
         return;
     }
 
     currentProfileId = profileId;
     const profile = allProfiles[profileId];
+
+    // Letztes verwendetes Profil speichern
+    localStorage.setItem('eldib_last_profile', profileId);
 
     // Stammdaten laden
     document.getElementById('studentName').value = profile.studentData.name || '';
@@ -2320,6 +2394,11 @@ function hasEarlierNichtErreicht(domain, itemId) {
 
 // Prüft ob Ziel für dieses Item blockiert ist
 function isZielBlocked(domain, itemId) {
+    // Wenn Blockade-Regeln deaktiviert sind, keine Blockierung
+    if (!blockingRulesEnabled) {
+        return { blocked: false, reason: '' };
+    }
+
     // Regel 1: Ein früheres Item ist "nicht erreicht"
     if (hasEarlierNichtErreicht(domain, itemId)) {
         return { blocked: true, reason: 'Ein früheres Item ist als "nicht erreicht" markiert' };
@@ -4073,16 +4152,32 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllProfiles();
     updateProfileDropdown();
 
-    // Alte Daten für Kompatibilität laden
-    loadFromLocalStorage();
+    // Blockade-Regeln Einstellung laden
+    loadBlockingRulesSetting();
+
+    // Letztes verwendetes Profil laden, wenn vorhanden
+    const lastProfileId = localStorage.getItem('eldib_last_profile');
+    if (lastProfileId && allProfiles[lastProfileId]) {
+        document.getElementById('profileSelect').value = lastProfileId;
+        loadProfile(lastProfileId);
+    } else {
+        // Alte Daten für Kompatibilität laden (nur wenn kein Profil gespeichert)
+        loadFromLocalStorage();
+    }
 
     renderAllDomains();
     updateStats();
     updateEvaluationUI();
 
-    // Auto-save on input change
+    // Auto-save für alle Eingabefelder im Schüler-Grid
     document.querySelectorAll('.student-grid input').forEach(input => {
-        input.addEventListener('change', saveToLocalStorage);
+        input.addEventListener('change', () => {
+            saveToLocalStorage();
+            // Speichere aktuelles Profil
+            if (currentProfileId) {
+                localStorage.setItem('eldib_last_profile', currentProfileId);
+            }
+        });
     });
 
     // Geburtsdatum-Änderung: Re-render um Bio-Alter-Sperre zu aktualisieren
