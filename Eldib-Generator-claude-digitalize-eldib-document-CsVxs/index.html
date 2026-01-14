@@ -1358,9 +1358,12 @@ function saveCurrentEvaluation() {
 }
 
 function manualSave() {
+    console.log('ELDiB: manualSave aufgerufen, currentProfileId:', currentProfileId);
+
     // Wenn kein Profil existiert, automatisch eines erstellen
     if (!currentProfileId) {
         const studentName = document.getElementById('studentName').value.trim();
+        console.log('ELDiB: Neues Profil erstellen für:', studentName);
         if (!studentName) {
             alert('Bitte geben Sie einen Schülernamen ein.');
             return;
@@ -1380,17 +1383,20 @@ function manualSave() {
         };
 
         currentProfileId = profileId;
+        console.log('ELDiB: Profil erstellt mit ID:', profileId);
         saveAllProfiles();
         updateProfileDropdown();
         document.getElementById('profileSelect').value = profileId;
         document.getElementById('deleteProfileBtn').style.display = 'inline-block';
         localStorage.setItem('eldib_last_profile', profileId);
+        console.log('ELDiB: Last profile ID gespeichert:', profileId);
     }
 
     // Wenn keine Evaluation existiert, automatisch eine erstellen
     if (!currentEvaluationId) {
         const today = new Date().toISOString().split('T')[0];
         const evaluationId = generateId();
+        console.log('ELDiB: Neue Evaluation erstellen mit ID:', evaluationId);
 
         const newEvaluation = {
             id: evaluationId,
@@ -1416,7 +1422,15 @@ function manualSave() {
         indicator.classList.remove('show');
     }, 2000);
 
-    console.log('Profil gespeichert:', currentProfileId);
+    console.log('ELDiB: Speichern abgeschlossen, currentProfileId:', currentProfileId);
+
+    // Überprüfe Speicherung
+    setTimeout(() => {
+        const savedProfiles = localStorage.getItem('eldib_profiles_v3');
+        const lastProfile = localStorage.getItem('eldib_last_profile');
+        console.log('ELDiB: Verifizierung - Gespeicherte Profile:', savedProfiles ? 'vorhanden' : 'FEHLT');
+        console.log('ELDiB: Verifizierung - Last Profile ID:', lastProfile);
+    }, 100);
 }
 
 // Hilfsfunktion für Farbschattierungen (für Word-Export)
@@ -1623,18 +1637,37 @@ function renderProgressChart(evaluations) {
 }
 
 function saveAllProfiles() {
-    localStorage.setItem('eldib_profiles_v3', JSON.stringify(allProfiles));
+    try {
+        const data = JSON.stringify(allProfiles);
+        localStorage.setItem('eldib_profiles_v3', data);
+        console.log('ELDiB: Profile gespeichert, Größe:', data.length, 'Bytes');
+
+        // Verifiziere Speicherung
+        const verify = localStorage.getItem('eldib_profiles_v3');
+        if (verify !== data) {
+            console.error('ELDiB: Speicherung fehlgeschlagen - Daten stimmen nicht überein!');
+            alert('WARNUNG: Die Speicherung konnte nicht verifiziert werden. Bitte starten Sie die App über einen lokalen Webserver.');
+        }
+    } catch (e) {
+        console.error('ELDiB: Fehler beim Speichern:', e);
+        alert('Fehler beim Speichern: ' + e.message);
+    }
 }
 
 function loadAllProfiles() {
     const saved = localStorage.getItem('eldib_profiles_v3');
+    console.log('ELDiB: localStorage eldib_profiles_v3:', saved ? saved.substring(0, 100) + '...' : 'LEER');
     if (saved) {
         try {
             allProfiles = JSON.parse(saved);
+            console.log('ELDiB: Profile erfolgreich geparst:', Object.keys(allProfiles));
         } catch (e) {
-            console.error('Error loading profiles:', e);
+            console.error('ELDiB: Fehler beim Laden der Profile:', e);
             allProfiles = {};
         }
+    } else {
+        console.log('ELDiB: Keine gespeicherten Profile im localStorage gefunden.');
+        allProfiles = {};
     }
 }
 
@@ -4190,8 +4223,21 @@ function exportToWord() {
 // Initialize
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Warnung für file:// URLs
+    if (window.location.protocol === 'file:') {
+        console.warn('ELDiB: App läuft über file:// - localStorage könnte nicht persistent sein!');
+        // Zeige Warnung nach 2 Sekunden, wenn noch keine Profile existieren
+        setTimeout(() => {
+            const saved = localStorage.getItem('eldib_profiles_v3');
+            if (!saved || saved === '{}') {
+                console.log('ELDiB: Keine gespeicherten Profile gefunden.');
+            }
+        }, 2000);
+    }
+
     // Neue Profile laden
     loadAllProfiles();
+    console.log('ELDiB: Profile geladen:', Object.keys(allProfiles).length, 'Profile');
     updateProfileDropdown();
 
     // Blockade-Regeln Einstellung laden
@@ -4199,9 +4245,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Letztes verwendetes Profil laden, wenn vorhanden
     const lastProfileId = localStorage.getItem('eldib_last_profile');
+    console.log('ELDiB: Letztes Profil ID:', lastProfileId);
     if (lastProfileId && allProfiles[lastProfileId]) {
         document.getElementById('profileSelect').value = lastProfileId;
         loadProfile(lastProfileId);
+        console.log('ELDiB: Profil geladen:', allProfiles[lastProfileId].studentData?.name);
     } else {
         // Alte Daten für Kompatibilität laden (nur wenn kein Profil gespeichert)
         loadFromLocalStorage();
