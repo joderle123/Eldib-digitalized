@@ -1358,13 +1358,53 @@ function saveCurrentEvaluation() {
 }
 
 function manualSave() {
+    // Wenn kein Profil existiert, automatisch eines erstellen
     if (!currentProfileId) {
-        alert('Bitte zuerst ein Schülerprofil erstellen oder auswählen.');
-        return;
+        const studentName = document.getElementById('studentName').value.trim();
+        if (!studentName) {
+            alert('Bitte geben Sie einen Schülernamen ein.');
+            return;
+        }
+
+        // Automatisch Profil erstellen
+        const profileId = generateId();
+        allProfiles[profileId] = {
+            id: profileId,
+            studentData: {
+                name: studentName,
+                birthDate: document.getElementById('birthDate').value || '',
+                foerderort: document.getElementById('foerderort').value || '',
+                assessorName: document.getElementById('assessorName').value || ''
+            },
+            evaluations: []
+        };
+
+        currentProfileId = profileId;
+        saveAllProfiles();
+        updateProfileDropdown();
+        document.getElementById('profileSelect').value = profileId;
+        document.getElementById('deleteProfileBtn').style.display = 'inline-block';
+        localStorage.setItem('eldib_last_profile', profileId);
     }
+
+    // Wenn keine Evaluation existiert, automatisch eine erstellen
     if (!currentEvaluationId) {
-        alert('Bitte zuerst eine Evaluation erstellen.');
-        return;
+        const today = new Date().toISOString().split('T')[0];
+        const evaluationId = generateId();
+
+        const newEvaluation = {
+            id: evaluationId,
+            date: document.getElementById('assessmentDate').value || today,
+            assessorName: document.getElementById('assessorName').value || '',
+            assessments: JSON.parse(JSON.stringify(assessments)),
+            developmentalAges: null
+        };
+
+        allProfiles[currentProfileId].evaluations.push(newEvaluation);
+        currentEvaluationId = evaluationId;
+        updateEvaluationDropdown();
+        document.getElementById('evaluationSelect').value = evaluationId;
+        document.getElementById('deleteEvalBtn').style.display = 'inline-block';
     }
 
     saveCurrentEvaluation();
@@ -1375,6 +1415,8 @@ function manualSave() {
     setTimeout(() => {
         indicator.classList.remove('show');
     }, 2000);
+
+    console.log('Profil gespeichert:', currentProfileId);
 }
 
 // Hilfsfunktion für Farbschattierungen (für Word-Export)
