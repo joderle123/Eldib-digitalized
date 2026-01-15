@@ -4300,375 +4300,260 @@ function exportPEI() {
     const student = getStudentData();
     const today = new Date().toLocaleDateString('de-DE');
     const biologicalAge = calculateAge(student.birthDate);
-
-    // Calculate developmental ages per domain
     const devAges = calculateAllDevelopmentalAges();
-
-    // Generate ELDiB grid data
     const gridData = generateELDiBGrid();
 
-    let html = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Plan éducatif individualisé - ${student.name || 'PEI'}</title>
-    <style>
-        @page { size: A4; margin: 15mm; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #333; line-height: 1.4; }
-        .page { page-break-after: always; }
-        .page:last-child { page-break-after: avoid; }
+    // CDSE Logo Base64
+    const cdseLogo = 'data:image/png;base64,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';
 
-        /* Header with logo */
-        .doc-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #2c3e50;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .doc-logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logo-circle {
-            width: 50px;
-            height: 50px;
-            border: 2px solid #3498db;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #3498db;
-            font-size: 12pt;
-        }
-        .logo-text-main { font-size: 18pt; font-weight: 800; color: #3498db; letter-spacing: 2px; }
-        .logo-text-sub { font-size: 8pt; color: #666; max-width: 180px; }
-        .doc-title { text-align: right; }
-        .doc-title h1 { font-size: 16pt; color: #2c3e50; margin: 0; }
-        .doc-title p { font-size: 9pt; color: #666; margin: 5px 0 0 0; }
+    // Generate DS Document HTML - exakt nach Template
+    let html = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
+    html += '<title>Diagnostic specialise - ' + (student.name || 'DS') + '</title>';
+    html += '<style>';
+    html += '@page { size: A4; margin: 20mm 15mm; }';
+    html += 'body { font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #000; }';
+    html += '.header { text-align: center; margin-bottom: 20px; }';
+    html += '.header img { height: 60px; }';
+    html += '.header h1 { font-size: 14pt; margin: 10px 0 5px 0; }';
+    html += '.header h2 { font-size: 12pt; font-weight: normal; margin: 0; }';
+    html += 'table { width: 100%; border-collapse: collapse; margin: 10px 0; }';
+    html += 'td, th { border: 1px solid #000; padding: 5px 8px; text-align: left; vertical-align: top; }';
+    html += '.info-table td:first-child { width: 200px; font-weight: bold; background: #f0f0f0; }';
+    html += '.section-title { background: #4472C4; color: white; font-weight: bold; padding: 8px; font-size: 11pt; margin-top: 15px; }';
+    html += '.sub-section { font-weight: bold; padding: 5px 8px; background: #D9E2F3; }';
+    html += '.eldib-grid { font-size: 8pt; }';
+    html += '.eldib-grid td { width: 25px; height: 18px; text-align: center; padding: 2px; }';
+    html += '.eldib-grid .header-cell { background: #4472C4; color: white; font-weight: bold; }';
+    html += '.eldib-grid .stufe-cell { background: #D9E2F3; font-weight: bold; font-size: 7pt; width: 80px; }';
+    html += '.erreicht { background: #70AD47 !important; color: white; }';
+    html += '.ziel { background: #FFC000 !important; color: #000; }';
+    html += '.empty-cell { background: #E7E6E6; }';
+    html += '.legend { margin: 10px 0; font-size: 9pt; }';
+    html += '.legend span { display: inline-block; margin-right: 20px; }';
+    html += '.legend-box { display: inline-block; width: 15px; height: 12px; border: 1px solid #000; vertical-align: middle; margin-right: 5px; }';
+    html += '.age-bars { margin: 15px 0; }';
+    html += '.age-bar-row { margin: 8px 0; }';
+    html += '.age-bar-label { display: inline-block; width: 180px; font-size: 9pt; }';
+    html += '.age-bar-container { display: inline-block; width: 300px; height: 20px; background: #E7E6E6; border: 1px solid #999; vertical-align: middle; }';
+    html += '.age-bar { height: 100%; display: inline-block; }';
+    html += '.age-bar.bio { background: #5B9BD5; }';
+    html += '.age-bar.verhalten { background: #ED7D31; }';
+    html += '.age-bar.kommunikation { background: #5B9BD5; }';
+    html += '.age-bar.sozialisation { background: #70AD47; }';
+    html += '.age-bar.kognition { background: #7030A0; }';
+    html += '.age-value { display: inline-block; width: 60px; text-align: right; font-size: 9pt; }';
+    html += '.placeholder { color: #666; font-style: italic; }';
+    html += '.page-break { page-break-before: always; }';
+    html += '.copyright { font-size: 7pt; text-align: center; margin-top: 10px; color: #666; }';
+    html += '</style></head><body>';
 
-        /* Sections */
-        .section { margin-bottom: 20px; }
-        .section-title {
-            background: #2c3e50;
-            color: white;
-            padding: 8px 15px;
-            font-size: 11pt;
-            font-weight: 600;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-        .section-title.blue { background: #3498db; }
-        .section-title.green { background: #27ae60; }
-        .section-title.purple { background: #9b59b6; }
+    // Header mit CDSE Logo
+    html += '<div class="header">';
+    html += '<img src="' + cdseLogo + '" alt="CDSE">';
+    html += '<h1>DIAGNOSTIC SPECIALISE (DS)</h1>';
+    html += '<h2>Centre pour le developpement socio-emotionnel</h2>';
+    html += '</div>';
 
-        /* Info grid */
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .info-item { padding: 8px 12px; background: #f8f9fa; border-left: 3px solid #3498db; }
-        .info-label { font-size: 8pt; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
-        .info-value { font-size: 10pt; font-weight: 600; color: #2c3e50; margin-top: 3px; }
+    // 1. Informations generales - AUTO-FILLED
+    html += '<div class="section-title">1. Informations generales</div>';
+    html += '<table class="info-table">';
+    html += '<tr><td>Nom et Prenom</td><td>' + (student.name || '') + '</td></tr>';
+    html += '<tr><td>Date de naissance</td><td>' + (student.birthDate ? new Date(student.birthDate).toLocaleDateString('de-DE') : '') + '</td></tr>';
+    html += '<tr><td>Age</td><td>' + (biologicalAge ? biologicalAge.years + ' ans, ' + biologicalAge.months + ' mois' : '') + '</td></tr>';
+    html += '<tr><td>Ecole/Institution</td><td>' + (student.foerderort || '') + '</td></tr>';
+    html += '<tr><td>Classe</td><td>' + (student.klpiKlasse || '') + '</td></tr>';
+    html += '<tr><td>Date evaluation</td><td>' + (student.assessmentDate ? new Date(student.assessmentDate).toLocaleDateString('de-DE') : today) + '</td></tr>';
+    html += '<tr><td>Evaluateur</td><td>' + (student.assessorName || '') + '</td></tr>';
+    html += '</table>';
 
-        /* ELDiB Grid */
-        .eldib-grid-container { margin: 20px 0; }
-        .eldib-legend {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 10px;
-            font-size: 9pt;
-            justify-content: center;
-        }
-        .legend-item { display: flex; align-items: center; gap: 5px; }
-        .legend-box { width: 20px; height: 15px; border: 1px solid #333; }
-        .legend-box.erreicht { background: #27ae60; }
-        .legend-box.ziel { background: #f1c40f; }
-        .legend-box.nicht { background: white; }
+    // 2. Motif de la demande - Placeholder
+    html += '<div class="section-title">2. Motif de la demande</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
 
-        .eldib-grid {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 8pt;
-        }
-        .eldib-grid th, .eldib-grid td {
-            border: 1px solid #333;
-            padding: 3px;
-            text-align: center;
-            width: 25px;
-            height: 18px;
-        }
-        .eldib-grid th {
-            background: #2c3e50;
-            color: white;
-            font-weight: 600;
-        }
-        .eldib-grid .niveau-header {
-            background: #34495e;
-            color: white;
-            font-weight: 600;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            width: 25px;
-        }
-        .eldib-grid td.erreicht { background: #27ae60; color: white; }
-        .eldib-grid td.ziel { background: #f1c40f; color: #333; }
-        .eldib-grid td.nicht-erreicht { background: white; }
-        .eldib-grid td.empty { background: #ecf0f1; }
+    // 3. Anamnese - Placeholder
+    html += '<div class="section-title">3. Anamnese</div>';
+    html += '<div class="sub-section">3.1 Developpement</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
+    html += '<div class="sub-section">3.2 Parcours scolaire</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
+    html += '<div class="sub-section">3.3 Situation familiale</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
 
-        /* Age comparison bars */
-        .age-comparison {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        .age-comparison h4 { margin: 0 0 15px 0; font-size: 11pt; color: #2c3e50; }
-        .age-bar-container { margin-bottom: 12px; }
-        .age-bar-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 9pt;
-            margin-bottom: 4px;
-        }
-        .age-bar-wrapper {
-            background: #ecf0f1;
-            border-radius: 10px;
-            height: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-        .age-bar {
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 8px;
-            font-size: 8pt;
-            color: white;
-            font-weight: 600;
-        }
-        .age-bar.bio { background: linear-gradient(90deg, #3498db, #2980b9); }
-        .age-bar.verhalten { background: linear-gradient(90deg, #e74c3c, #c0392b); }
-        .age-bar.kommunikation { background: linear-gradient(90deg, #3498db, #2980b9); }
-        .age-bar.sozialisation { background: linear-gradient(90deg, #27ae60, #219a52); }
-        .age-bar.kognition { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
+    // 4. Procedure diagnostique - AUTO-FILLED mit ELDiB
+    html += '<div class="section-title">4. Procedure diagnostique</div>';
+    html += '<div class="sub-section">4.1 ELDiB - Entwicklungspadagogischer Lernziel-Diagnose-Bogen</div>';
+    html += '<p style="font-size: 9pt; margin: 10px 0;">Evaluation du developpement socio-emotionnel selon les domaines: Comportement (V), Communication (KOMM), Socialisation (SOZ) et Cognition (KOG).</p>';
 
-        /* Domain summary */
-        .domain-summary { margin: 15px 0; }
-        .domain-box {
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            border-left: 4px solid;
-        }
-        .domain-box.verhalten { background: #fdf2f2; border-color: #e74c3c; }
-        .domain-box.kommunikation { background: #f2f8fd; border-color: #3498db; }
-        .domain-box.sozialisation { background: #f2fdf5; border-color: #27ae60; }
-        .domain-box.kognition { background: #f8f2fd; border-color: #9b59b6; }
-        .domain-box h5 { margin: 0 0 8px 0; font-size: 10pt; }
-        .domain-box p { margin: 4px 0; font-size: 9pt; }
+    // Legende
+    html += '<div class="legend">';
+    html += '<span><span class="legend-box erreicht"></span> Erreicht (atteint)</span>';
+    html += '<span><span class="legend-box ziel"></span> Ziel (objectif)</span>';
+    html += '<span><span class="legend-box" style="background:white;"></span> Nicht erreicht</span>';
+    html += '</div>';
 
-        /* Signature area */
-        .signature-area {
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-        }
-        .signature-box { border-top: 1px solid #333; padding-top: 10px; }
-        .signature-label { font-size: 9pt; color: #666; }
+    // ELDiB Grid generieren
+    html += generateDSGridHTML(gridData);
 
-        .copyright {
-            font-size: 7pt;
-            color: #999;
-            text-align: center;
-            margin-top: 20px;
-            font-style: italic;
-        }
-    </style>
-</head>
-<body>
+    html += '<div class="copyright">';
+    html += '&copy; Distributed in the English original by the Developmental Therapy Institute, Inc., 1992.<br>';
+    html += '&copy; deutsche Ausgabe: Institut fur Entwicklungstherapie/Entwicklungspadagogik e.V. (ETEP Europe)';
+    html += '</div>';
 
-<!-- PAGE 1 -->
-<div class="page">
-    <div class="doc-header">
-        <div class="doc-logo">
-            <img src="data:image/png;base64,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"
-                 alt="CDSE Logo" style="height: 45px; width: auto;">
-        </div>
-        <div class="doc-title">
-            <h1>Plan éducatif individualisé (PEI)</h1>
-            <p>Diagnostic spécialisé - ELDiB</p>
-        </div>
-    </div>
+    // Page break
+    html += '<div class="page-break"></div>';
 
-    <div class="section">
-        <div class="section-title">1. Informations générales sur l'élève</div>
-        <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">Nom et Prénom</div>
-                <div class="info-value">${student.name || '-'}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Date de naissance</div>
-                <div class="info-value">${student.birthDate ? new Date(student.birthDate).toLocaleDateString('de-DE') : '-'}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Âge biologique</div>
-                <div class="info-value">${biologicalAge ? biologicalAge.years + ' ans, ' + biologicalAge.months + ' mois' : '-'}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Lieu de scolarisation</div>
-                <div class="info-value">${student.foerderort || '-'}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Date d'évaluation</div>
-                <div class="info-value">${student.assessmentDate ? new Date(student.assessmentDate).toLocaleDateString('de-DE') : today}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">Évaluateur</div>
-                <div class="info-value">${student.assessorName || '-'}</div>
-            </div>
-        </div>
-    </div>
+    // 5. Observations - Placeholder
+    html += '<div class="section-title">5. Observations</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
 
-    <div class="section">
-        <div class="section-title blue">4. Procédure diagnostique - ELDiB</div>
-        <p style="font-size: 9pt; margin-bottom: 15px;">
-            <strong>ELDiB</strong> (Entwicklungspädagogischer Lernziel-Diagnose-Bogen) -
-            Outil d'évaluation du développement socio-émotionnel selon les domaines:
-            Comportement, Communication, Socialisation et Cognition.
-        </p>
+    // 6. Resultats
+    html += '<div class="section-title">6. Resultats</div>';
+    html += '<div class="sub-section">6.1 Synthese</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
 
-        <div class="eldib-legend">
-            <div class="legend-item"><div class="legend-box erreicht"></div> Objectif atteint (erreicht)</div>
-            <div class="legend-item"><div class="legend-box ziel"></div> Objectif actuel (Ziel)</div>
-            <div class="legend-item"><div class="legend-box nicht"></div> Non atteint (nicht erreicht)</div>
-        </div>
+    // 6.2 Comparaison des ages - AUTO-FILLED
+    html += '<div class="sub-section">6.2 Comparaison: Age biologique vs. Age de developpement</div>';
+    html += '<div class="age-bars">';
 
-        ${generateELDiBGridHTML(gridData)}
+    // Biologisches Alter
+    var bioYears = biologicalAge ? biologicalAge.decimal : 0;
+    var maxAge = 16;
+    html += '<div class="age-bar-row">';
+    html += '<span class="age-bar-label">Age biologique:</span>';
+    html += '<span class="age-bar-container"><span class="age-bar bio" style="width:' + Math.min((bioYears/maxAge)*100, 100) + '%;"></span></span>';
+    html += '<span class="age-value">' + (biologicalAge ? bioYears.toFixed(1) + ' ans' : '-') + '</span>';
+    html += '</div>';
 
-        <div class="copyright">
-            © Distributed in the English original by the Developmental Therapy Institute, Inc., 1992.<br>
-            © deutsche Ausgabe: Institut für Entwicklungstherapie/Entwicklungspädagogik e.V. (ETEP Europe)
-        </div>
-    </div>
-</div>
+    // Verhalten
+    html += '<div class="age-bar-row">';
+    html += '<span class="age-bar-label">Comportement (V):</span>';
+    html += '<span class="age-bar-container"><span class="age-bar verhalten" style="width:' + (devAges.verhalten ? Math.min((devAges.verhalten/maxAge)*100, 100) : 0) + '%;"></span></span>';
+    html += '<span class="age-value">' + (devAges.verhalten ? devAges.verhalten.toFixed(1) + ' ans' : '-') + '</span>';
+    html += '</div>';
 
-<!-- PAGE 2 -->
-<div class="page">
-    <div class="doc-header">
-        <div class="doc-logo">
-            <img src="data:image/png;base64,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"
-                 alt="CDSE Logo" style="height: 45px; width: auto;">
-        </div>
-        <div class="doc-title">
-            <h1>PEI - ${student.name || ''}</h1>
-            <p>Comparaison des âges de développement</p>
-        </div>
-    </div>
+    // Kommunikation
+    html += '<div class="age-bar-row">';
+    html += '<span class="age-bar-label">Communication (KOMM):</span>';
+    html += '<span class="age-bar-container"><span class="age-bar kommunikation" style="width:' + (devAges.kommunikation ? Math.min((devAges.kommunikation/maxAge)*100, 100) : 0) + '%;"></span></span>';
+    html += '<span class="age-value">' + (devAges.kommunikation ? devAges.kommunikation.toFixed(1) + ' ans' : '-') + '</span>';
+    html += '</div>';
 
-    <div class="section">
-        <div class="section-title green">6.2 Comparaison: Âge biologique vs. Âge de développement</div>
+    // Sozialisation
+    html += '<div class="age-bar-row">';
+    html += '<span class="age-bar-label">Socialisation (SOZ):</span>';
+    html += '<span class="age-bar-container"><span class="age-bar sozialisation" style="width:' + (devAges.sozialisation ? Math.min((devAges.sozialisation/maxAge)*100, 100) : 0) + '%;"></span></span>';
+    html += '<span class="age-value">' + (devAges.sozialisation ? devAges.sozialisation.toFixed(1) + ' ans' : '-') + '</span>';
+    html += '</div>';
 
-        <div class="age-comparison">
-            <h4>Profil de développement</h4>
+    // Kognition
+    html += '<div class="age-bar-row">';
+    html += '<span class="age-bar-label">Cognition (KOG):</span>';
+    html += '<span class="age-bar-container"><span class="age-bar kognition" style="width:' + (devAges.kognition ? Math.min((devAges.kognition/maxAge)*100, 100) : 0) + '%;"></span></span>';
+    html += '<span class="age-value">' + (devAges.kognition ? devAges.kognition.toFixed(1) + ' ans' : '-') + '</span>';
+    html += '</div>';
 
-            <div class="age-bar-container">
-                <div class="age-bar-label">
-                    <span>Âge biologique</span>
-                    <span>${biologicalAge ? biologicalAge.years + ',' + biologicalAge.months + ' ans' : '-'}</span>
-                </div>
-                <div class="age-bar-wrapper">
-                    <div class="age-bar bio" style="width: ${biologicalAge ? Math.min((biologicalAge.decimal / 16) * 100, 100) : 0}%">
-                        ${biologicalAge ? biologicalAge.decimal.toFixed(1) : ''}
-                    </div>
-                </div>
-            </div>
+    html += '</div>';
 
-            <div class="age-bar-container">
-                <div class="age-bar-label">
-                    <span>Comportement (Verhalten)</span>
-                    <span>${devAges.verhalten ? devAges.verhalten.toFixed(1) + ' ans' : '-'}</span>
-                </div>
-                <div class="age-bar-wrapper">
-                    <div class="age-bar verhalten" style="width: ${devAges.verhalten ? Math.min((devAges.verhalten / 16) * 100, 100) : 0}%">
-                        ${devAges.verhalten ? devAges.verhalten.toFixed(1) : ''}
-                    </div>
-                </div>
-            </div>
+    // 7. Recommandations - Placeholder
+    html += '<div class="section-title">7. Recommandations du CDSE</div>';
+    html += '<table><tr><td class="placeholder">[A completer manuellement]</td></tr></table>';
 
-            <div class="age-bar-container">
-                <div class="age-bar-label">
-                    <span>Communication (Kommunikation)</span>
-                    <span>${devAges.kommunikation ? devAges.kommunikation.toFixed(1) + ' ans' : '-'}</span>
-                </div>
-                <div class="age-bar-wrapper">
-                    <div class="age-bar kommunikation" style="width: ${devAges.kommunikation ? Math.min((devAges.kommunikation / 16) * 100, 100) : 0}%">
-                        ${devAges.kommunikation ? devAges.kommunikation.toFixed(1) : ''}
-                    </div>
-                </div>
-            </div>
+    // 8. Signatures
+    html += '<div class="section-title">8. Signatures</div>';
+    html += '<table>';
+    html += '<tr><td style="width:50%;">Date et signature evaluateur:<br><br><br></td>';
+    html += '<td>Date et signature parents/tuteurs:<br><br><br></td></tr>';
+    html += '</table>';
 
-            <div class="age-bar-container">
-                <div class="age-bar-label">
-                    <span>Socialisation</span>
-                    <span>${devAges.sozialisation ? devAges.sozialisation.toFixed(1) + ' ans' : '-'}</span>
-                </div>
-                <div class="age-bar-wrapper">
-                    <div class="age-bar sozialisation" style="width: ${devAges.sozialisation ? Math.min((devAges.sozialisation / 16) * 100, 100) : 0}%">
-                        ${devAges.sozialisation ? devAges.sozialisation.toFixed(1) : ''}
-                    </div>
-                </div>
-            </div>
-
-            <div class="age-bar-container">
-                <div class="age-bar-label">
-                    <span>Cognition</span>
-                    <span>${devAges.kognition ? devAges.kognition.toFixed(1) + ' ans' : '-'}</span>
-                </div>
-                <div class="age-bar-wrapper">
-                    <div class="age-bar kognition" style="width: ${devAges.kognition ? Math.min((devAges.kognition / 16) * 100, 100) : 0}%">
-                        ${devAges.kognition ? devAges.kognition.toFixed(1) : ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-title purple">Résumé par domaine</div>
-        <div class="domain-summary">
-            ${generateDomainSummaryHTML()}
-        </div>
-    </div>
-
-    <div class="signature-area">
-        <div class="signature-box">
-            <div class="signature-label">Date et signature de l'évaluateur</div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-label">Date et signature des parents/tuteurs</div>
-        </div>
-    </div>
-</div>
-
-</body>
-</html>`;
+    html += '</body></html>';
 
     // Download
-    const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    var blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
     link.href = url;
-    link.download = `PEI_${(student.name || 'Diagnostic').replace(/\s+/g, '_')}_${today.replace(/\./g, '-')}.doc`;
+    link.download = 'DS_' + (student.name || 'Diagnostic').replace(/\s+/g, '_') + '_' + today.replace(/\./g, '-') + '.doc';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+}
+
+// Hilfsfunktion fuer DS Grid HTML
+function generateDSGridHTML(gridData) {
+    var statusLookup = {};
+    Object.keys(gridData).forEach(function(domain) {
+        statusLookup[domain] = {};
+        gridData[domain].forEach(function(item) {
+            statusLookup[domain][item.nummer] = item.status;
+        });
+    });
+
+    var html = '<table class="eldib-grid">';
+    html += '<tr>';
+    html += '<td class="header-cell">V</td>';
+    html += '<td class="header-cell">KOMM</td>';
+    html += '<td class="header-cell">SOZ</td>';
+    html += '<td class="header-cell">KOG</td>';
+    html += '<td class="stufe-cell">Stufe</td>';
+    html += '</tr>';
+
+    // Stufen-Grenzen: Stufe 5 (57-62), Stufe 4 (50-56), Stufe 3 (37-49), Stufe 2 (20-36), Stufe 1 (1-19)
+    var stufeLabels = {
+        62: 'Stufe 5: 13-17 Jahre',
+        56: 'Stufe 4: 10-12 Jahre',
+        49: 'Stufe 3: 6-9 Jahre',
+        36: 'Stufe 2: 2-5 Jahre',
+        19: 'Stufe 1: 0-2 Jahre'
+    };
+
+    for (var row = 62; row >= 1; row--) {
+        html += '<tr>';
+
+        // V (Verhalten) - max 33
+        if (row <= 33) {
+            var vStatus = statusLookup.verhalten[row] || 'nicht-erreicht';
+            var vClass = vStatus === 'erreicht' ? 'erreicht' : (vStatus === 'ziel' ? 'ziel' : '');
+            html += '<td class="' + vClass + '">' + row + '</td>';
+        } else {
+            html += '<td class="empty-cell"></td>';
+        }
+
+        // KOMM (Kommunikation) - max 35
+        if (row <= 35) {
+            var kStatus = statusLookup.kommunikation[row] || 'nicht-erreicht';
+            var kClass = kStatus === 'erreicht' ? 'erreicht' : (kStatus === 'ziel' ? 'ziel' : '');
+            html += '<td class="' + kClass + '">' + row + '</td>';
+        } else {
+            html += '<td class="empty-cell"></td>';
+        }
+
+        // SOZ (Sozialisation) - max 41
+        if (row <= 41) {
+            var sStatus = statusLookup.sozialisation[row] || 'nicht-erreicht';
+            var sClass = sStatus === 'erreicht' ? 'erreicht' : (sStatus === 'ziel' ? 'ziel' : '');
+            html += '<td class="' + sClass + '">' + row + '</td>';
+        } else {
+            html += '<td class="empty-cell"></td>';
+        }
+
+        // KOG (Kognition) - max 62
+        var kogStatus = statusLookup.kognition[row] || 'nicht-erreicht';
+        var kogClass = kogStatus === 'erreicht' ? 'erreicht' : (kogStatus === 'ziel' ? 'ziel' : '');
+        html += '<td class="' + kogClass + '">' + row + '</td>';
+
+        // Stufe Label
+        if (stufeLabels[row]) {
+            html += '<td class="stufe-cell">' + stufeLabels[row] + '</td>';
+        } else {
+            html += '<td class="stufe-cell"></td>';
+        }
+
+        html += '</tr>';
+    }
+
+    html += '</table>';
+    return html;
 }
 
 function generateELDiBGrid() {
